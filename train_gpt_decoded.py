@@ -396,10 +396,14 @@ class CausalSelfAttention(nn.Module):
         if FLASH_ATTN_3:
             y = flash_attn_3_func(q, k, v, causal=True)
         else:
+            # Expand k,v to match q heads for GQA
+            groups = self.num_heads // self.num_kv_heads
+            k_exp = k.repeat_interleave(groups, dim=2)
+            v_exp = v.repeat_interleave(groups, dim=2)
             y = F.scaled_dot_product_attention(
                 q.transpose(1, 2),
-                k.transpose(1, 2), 
-                v.transpose(1, 2),
+                k_exp.transpose(1, 2),
+                v_exp.transpose(1, 2),
                 is_causal=True
             ).transpose(1, 2)
             
